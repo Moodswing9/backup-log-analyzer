@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# 🔍 Backup Log Analyzer
 
-First, run the development server:
+**Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
+
+[![Version](https://img.shields.io/badge/version-0.1.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ef4444?style=flat-square)](#license)
+[![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Haiku-f59e0b?style=flat-square)](#)
+[![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20TypeScript-3178c6?style=flat-square)](#stack)
+[![Deploy](https://img.shields.io/badge/deployed%20on-Vercel-000000?style=flat-square&logo=vercel)](https://backup-log-analyzer.vercel.app)
+
+**[→ Try it live](https://backup-log-analyzer.vercel.app)**
+
+</div>
+
+---
+
+## Overview
+
+Drop any log output into the textarea and hit **Analyze**. Claude Haiku 4.5 streams back a structured report with a color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands — all in a few seconds. No account required.
+
+Supports logs from:
+
+| Source | Examples |
+|:---|:---|
+| **Dell EMC PPDM** | Protection job failures, Elasticsearch cluster health, asset errors |
+| **Dell EMC NetWorker** | NSR peer mismatches, savefs connection errors, backup failures |
+| **Data Domain** | DDBoost status, filesystem capacity alerts, replication errors |
+| **Veeam** | Job failures, proxy errors, repository warnings |
+| **Linux syslog** | `journalctl`, `/var/log/messages`, `dmesg` |
+| **Windows Event Log** | Application, System, Security event exports |
+
+---
+
+## Severity Levels
+
+The analysis opens with a color-coded severity badge:
+
+| Badge | Meaning |
+|:---|:---|
+| 🔴 **CRITICAL** | Service down or data at risk — act immediately |
+| 🟠 **HIGH** | Significant failure that will impact backups |
+| 🟡 **MEDIUM** | Warnings that need attention soon |
+| 🟢 **LOW** | Minor issues with minimal impact |
+| 🔵 **INFO** | No problems detected |
+
+---
+
+## Self-Hosting
+
+The live version at [backup-log-analyzer.vercel.app](https://backup-log-analyzer.vercel.app) is open to use. To run your own instance:
+
+### Prerequisites
+
+- Node.js 18+
+- An [Anthropic API key](https://console.anthropic.com/)
+
+### Setup
+
+```bash
+git clone https://github.com/Moodswing9/backup-log-analyzer.git
+cd backup-log-analyzer
+npm install
+```
+
+Create `.env.local`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx vercel --prod
+npx vercel env add ANTHROPIC_API_KEY production
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Layer | Technology |
+|:---|:---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS 4 |
+| AI | Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) via Anthropic SDK |
+| Streaming | Web `ReadableStream` → `response.body.getReader()` |
+| Deployment | Vercel |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Architecture
 
-## Deploy on Vercel
+```
+POST /api/analyze
+  ↓ validates input (max 50k chars)
+  ↓ streams claude-haiku-4-5-20251001 response via ReadableStream
+  ↓ client reads chunks with getReader(), appends to state
+  ↓ react-markdown renders streamed output live
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Privacy
+
+No logs are stored, logged, or retained. Each request is passed to the Anthropic API and discarded after the streaming response completes.
+
+---
+
+## License
+
+All Rights Reserved © Moodswing9
