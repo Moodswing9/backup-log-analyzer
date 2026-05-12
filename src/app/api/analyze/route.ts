@@ -27,7 +27,51 @@ Specific, copy-pasteable remediation steps. Use fenced code blocks for all shell
 
 If no issues are found, say so clearly and assign INFO severity.`;
 
+// ── PII redaction ─────────────────────────────────────────────────────────────
+
+function redactLogPII(logs: string): string {
+  return logs
+    .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, 'Bearer [REDACTED]')
+    .replace(/Basic\s+[A-Za-z0-9+/]+=*/gi, 'Basic [REDACTED]')
+    .replace(
+      /("(?:password|passwd|secret|token|api_key|apikey|access_key|private_key)"\s*:\s*)"[^"]*"/gi,
+      '$1"[REDACTED]"',
+    )
+    .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
+    .replace(/\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b/g, '$1.x.x');
+}
+
+// ── Per-IP rate limiting ──────────────────────────────────────────────────────
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const ipRequestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (ipRequestLog.get(ip) ?? []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_MS,
+  );
+  if (timestamps.length >= RATE_LIMIT_MAX) return true;
+  ipRequestLog.set(ip, [...timestamps, now]);
+  return false;
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-real-ip') ??
+    '127.0.0.1';
+
+  if (isRateLimited(ip)) {
+    return Response.json(
+      { error: 'Rate limit exceeded. Please wait a minute before trying again.' },
+      { status: 429 },
+    );
+  }
+
   let body: { logs?: unknown };
   try {
     body = await request.json();
@@ -46,6 +90,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const redactedLogs = redactLogPII(logs);
+
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -57,7 +103,7 @@ export async function POST(request: Request) {
           messages: [
             {
               role: 'user',
-              content: `Analyze these logs:\n\n\`\`\`\n${logs}\n\`\`\``,
+              content: `Analyze these logs:\n\n\`\`\`\n${redactedLogs}\n\`\`\``,
             },
           ],
         });
@@ -70,10 +116,12 @@ export async function POST(request: Request) {
             controller.enqueue(enc.encode(chunk.delta.text));
           }
         }
-      } catch {
-        controller.enqueue(
-          enc.encode('\n\n**Error:** Analysis failed. Check your API key and try again.'),
-        );
+      } catch (err) {
+        const msg =
+          err instanceof Error && err.message.includes('429')
+            ? '\n\n**Error:** API rate limit reached. Please try again in a moment.'
+            : '\n\n**Error:** Analysis failed. Check your API key and try again.';
+        controller.enqueue(enc.encode(msg));
       } finally {
         controller.close();
       }
