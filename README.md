@@ -4,7 +4,7 @@
 
 **Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ef4444?style=flat-square)](#license)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Haiku-f59e0b?style=flat-square)](#)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20TypeScript-3178c6?style=flat-square)](#stack)
@@ -110,9 +110,13 @@ POST /api/analyze
 
 ---
 
-## Privacy
+## Security & Privacy
 
-No logs are stored, logged, or retained. Each request is passed to the Anthropic API and discarded after the streaming response completes.
+| Protection | How it works |
+|:---|:---|
+| **PII redaction** | Bearer/Basic tokens, credential JSON fields (`"password": "..."` etc.), email addresses, and IPv4 octets are stripped server-side before the log text is forwarded to Claude |
+| **Per-IP rate limiting** | 10 requests per minute per IP (sliding window, in-memory). Exceeding the limit returns HTTP 429 |
+| **No persistence** | Logs are never stored, logged, or retained. Each request is passed to the Anthropic API and discarded after the streaming response completes |
 
 ---
 
