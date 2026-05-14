@@ -16,7 +16,7 @@ function extractSeverity(markdown: string): string | null {
   return match ? match[1].toUpperCase() : null;
 }
 
-const PLACEHOLDER = `Paste your log output here. Examples:
+const PLACEHOLDER_SINGLE = `Paste your log output here. Examples:
 
 2026-05-11 03:14:22 ERROR  [NetWorker] savefs: cannot connect to nsrexecd on client01.corp.local
 2026-05-11 03:14:22 ERROR  [NetWorker] NSR peer information mismatch for host client01.corp.local
@@ -24,24 +24,53 @@ const PLACEHOLDER = `Paste your log output here. Examples:
 2026-05-11 03:14:25 ERROR  [PPDM] Elasticsearch cluster health: RED (unassigned shards=14)
 2026-05-11 03:14:30 ERROR  [DD6900] DDBoost: filesystem usage 94% — threshold exceeded`;
 
+const PLACEHOLDER_BEFORE = `Paste the REFERENCE log here (earlier / last known good run).
+
+2026-05-10 02:01:15 INFO   [PPDM] Protection job started: policy=k8s-daily
+2026-05-10 02:14:38 INFO   [PPDM] Protection job completed: 312 assets, 0 failed`;
+
+const PLACEHOLDER_AFTER = `Paste the CURRENT log here (later / failing run).
+
+2026-05-11 02:01:17 INFO   [PPDM] Protection job started: policy=k8s-daily
+2026-05-11 03:14:25 ERROR  [PPDM] Protection job FAILED: policy=k8s-daily, failed=14
+2026-05-11 03:14:26 ERROR  [PPDM] vProxy unreachable: vproxy01.corp.local (timeout after 30s)`;
+
+type Mode = 'single' | 'diff';
+
 export default function Analyzer() {
-  const [logText, setLogText] = useState('');
-  const [analysis, setAnalysis] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [mode, setMode]           = useState<Mode>('single');
+  const [logText, setLogText]     = useState('');
+  const [logBefore, setLogBefore] = useState('');
+  const [logAfter, setLogAfter]   = useState('');
+  const [analysis, setAnalysis]   = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+
+  const switchMode = useCallback((next: Mode) => {
+    setMode(next);
+    setAnalysis('');
+    setError('');
+  }, []);
 
   const analyze = useCallback(async () => {
-    if (!logText.trim()) return;
+    const ready = mode === 'single'
+      ? logText.trim().length > 0
+      : logBefore.trim().length > 0 && logAfter.trim().length > 0;
+    if (!ready) return;
 
     setLoading(true);
     setAnalysis('');
     setError('');
 
     try {
+      const body = mode === 'diff'
+        ? { mode: 'diff', logsBefore: logBefore, logsAfter: logAfter }
+        : { logs: logText };
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logs: logText }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -63,40 +92,117 @@ export default function Analyzer() {
     } finally {
       setLoading(false);
     }
-  }, [logText]);
+  }, [mode, logText, logBefore, logAfter]);
+
+  const isReady = mode === 'single'
+    ? logText.trim().length > 0
+    : logBefore.trim().length > 0 && logAfter.trim().length > 0;
 
   const severity = extractSeverity(analysis);
   const severityStyle = severity ? SEVERITY_STYLES[severity] : null;
 
+  const textareaBase = `
+    w-full resize-none rounded-lg border border-[#1a2030]
+    bg-[#0e1318] p-4 font-mono text-sm text-[#c8d6e5]
+    placeholder:text-[#2a3548] focus:border-purple-700 focus:outline-none
+    focus:ring-1 focus:ring-purple-700/40 transition-colors
+  `;
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Mode toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[#4a5568] mr-1">Mode:</span>
+        <button
+          onClick={() => switchMode('single')}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none ${
+            mode === 'single'
+              ? 'bg-purple-700 text-white'
+              : 'border border-[#1a2030] bg-[#0e1318] text-[#4a5568] hover:text-[#c8d6e5]'
+          }`}
+        >
+          Single Log
+        </button>
+        <button
+          onClick={() => switchMode('diff')}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none ${
+            mode === 'diff'
+              ? 'bg-purple-700 text-white'
+              : 'border border-[#1a2030] bg-[#0e1318] text-[#4a5568] hover:text-[#c8d6e5]'
+          }`}
+        >
+          Diff Mode
+        </button>
+        {mode === 'diff' && (
+          <span className="text-xs text-[#4a5568]">
+            — paste two logs to identify regressions
+          </span>
+        )}
+      </div>
+
       {/* Input + output grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Log input */}
+        {/* Log input(s) */}
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-[#c8d6e5]">
-              Log Input
-            </label>
-            <span className="text-xs text-[#4a5568]">
-              {logText.length.toLocaleString()} / 50,000 chars
-            </span>
-          </div>
-          <textarea
-            value={logText}
-            onChange={e => setLogText(e.target.value)}
-            placeholder={PLACEHOLDER}
-            spellCheck={false}
-            className="
-              h-96 lg:h-[480px] w-full resize-none rounded-lg border border-[#1a2030]
-              bg-[#0e1318] p-4 font-mono text-sm text-[#c8d6e5]
-              placeholder:text-[#2a3548] focus:border-purple-700 focus:outline-none
-              focus:ring-1 focus:ring-purple-700/40 transition-colors
-            "
-          />
+          {mode === 'single' ? (
+            <>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-[#c8d6e5]">Log Input</label>
+                <span className="text-xs text-[#4a5568]">
+                  {logText.length.toLocaleString()} / 50,000 chars
+                </span>
+              </div>
+              <textarea
+                value={logText}
+                onChange={e => setLogText(e.target.value)}
+                placeholder={PLACEHOLDER_SINGLE}
+                spellCheck={false}
+                className={`h-96 lg:h-[480px] ${textareaBase}`}
+              />
+            </>
+          ) : (
+            <>
+              {/* Reference log */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-[#c8d6e5]">
+                  Reference Log
+                  <span className="ml-2 text-xs text-[#4a5568] font-normal">earlier / last known good</span>
+                </label>
+                <span className="text-xs text-[#4a5568]">
+                  {logBefore.length.toLocaleString()} / 25,000
+                </span>
+              </div>
+              <textarea
+                value={logBefore}
+                onChange={e => setLogBefore(e.target.value)}
+                placeholder={PLACEHOLDER_BEFORE}
+                spellCheck={false}
+                className={`h-44 lg:h-[220px] ${textareaBase}`}
+              />
+
+              {/* Current log */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-[#c8d6e5]">
+                  Current Log
+                  <span className="ml-2 text-xs text-[#4a5568] font-normal">later / failing run</span>
+                </label>
+                <span className="text-xs text-[#4a5568]">
+                  {logAfter.length.toLocaleString()} / 25,000
+                </span>
+              </div>
+              <textarea
+                value={logAfter}
+                onChange={e => setLogAfter(e.target.value)}
+                placeholder={PLACEHOLDER_AFTER}
+                spellCheck={false}
+                className={`h-44 lg:h-[220px] ${textareaBase}`}
+              />
+            </>
+          )}
+
           <button
             onClick={analyze}
-            disabled={loading || logText.trim().length === 0}
+            disabled={loading || !isReady}
             className="
               flex items-center justify-center gap-2 rounded-lg px-6 py-3
               bg-purple-700 hover:bg-purple-600 disabled:bg-[#1a2030]
@@ -107,14 +213,14 @@ export default function Analyzer() {
             {loading ? (
               <>
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Analyzing…
+                {mode === 'diff' ? 'Comparing…' : 'Analyzing…'}
               </>
             ) : (
               <>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.695-1.405 2.695H4.203c-1.436 0-2.405-1.695-1.405-2.695L4.2 15.3" />
                 </svg>
-                Analyze Logs
+                {mode === 'diff' ? 'Compare Logs' : 'Analyze Logs'}
               </>
             )}
           </button>
@@ -124,7 +230,7 @@ export default function Analyzer() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-[#c8d6e5]">
-              Analysis
+              {mode === 'diff' ? 'Diff Analysis' : 'Analysis'}
             </label>
             {severityStyle && (
               <span className={`flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold ${severityStyle.bg} ${severityStyle.text}`}>
@@ -144,7 +250,9 @@ export default function Analyzer() {
 
             {!analysis && !loading && !error && (
               <p className="text-sm text-[#2a3548] italic">
-                Analysis will stream here once you paste logs and click Analyze.
+                {mode === 'diff'
+                  ? 'Paste both logs and click Compare — regressions, resolved issues, and changed patterns will stream here.'
+                  : 'Analysis will stream here once you paste logs and click Analyze.'}
               </p>
             )}
 
@@ -201,7 +309,7 @@ export default function Analyzer() {
               "
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
               Copy Analysis
             </button>

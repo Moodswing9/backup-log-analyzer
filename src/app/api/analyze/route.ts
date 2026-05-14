@@ -27,6 +27,34 @@ Specific, copy-pasteable remediation steps. Use fenced code blocks for all shell
 
 If no issues are found, say so clearly and assign INFO severity.`;
 
+const DIFF_SYSTEM_PROMPT = `You are a senior infrastructure engineer specializing in backup and data protection systems (Dell EMC NetWorker, PowerProtect Data Manager, Veeam, Commvault, and generic Linux/Windows servers).
+
+You are given two log captures: a REFERENCE log (earlier/healthy run) and a CURRENT log (later/failing run). Compare them and identify exactly what changed.
+
+Always use this exact structure:
+
+## Severity: [CRITICAL | HIGH | MEDIUM | LOW | INFO]
+
+## Summary
+2–3 sentence overview of what regressed, resolved, or changed between the two captures.
+
+## Regressions (New in Current)
+Errors or warnings that appear in the CURRENT log but were absent in the REFERENCE. Cite the exact line or pattern. Mark the most critical with **[CRITICAL]**.
+
+## Resolved (Fixed Since Reference)
+Errors or warnings present in the REFERENCE that no longer appear in the CURRENT. Note these as positive changes.
+
+## Changed Patterns
+Issues present in both logs but with different frequency, severity, or error code. Note whether they worsened or improved.
+
+## Root Cause of Top Regression
+One paragraph diagnosing the most critical new issue, citing specific log evidence from both captures.
+
+## Recommended Actions
+Specific, copy-pasteable remediation steps targeting the top regression. Use fenced code blocks for all shell commands.
+
+If logs are identical or no regressions found, say so clearly and assign INFO severity.`;
+
 // ── PII redaction ─────────────────────────────────────────────────────────────
 
 function redactLogPII(logs: string): string {
@@ -72,25 +100,49 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { logs?: unknown };
+  let body: { logs?: unknown; logsBefore?: unknown; logsAfter?: unknown; mode?: unknown };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const logs = body.logs;
-  if (typeof logs !== 'string' || logs.trim().length === 0) {
-    return Response.json({ error: 'No log content provided.' }, { status: 400 });
-  }
-  if (logs.length > 50_000) {
-    return Response.json(
-      { error: 'Log content too large. Maximum 50,000 characters.' },
-      { status: 400 },
-    );
-  }
+  const isDiff = body.mode === 'diff';
 
-  const redactedLogs = redactLogPII(logs);
+  let systemPrompt: string;
+  let userContent: string;
+
+  if (isDiff) {
+    const logsBefore = body.logsBefore;
+    const logsAfter = body.logsAfter;
+    if (typeof logsBefore !== 'string' || logsBefore.trim().length === 0) {
+      return Response.json({ error: 'No reference log content provided.' }, { status: 400 });
+    }
+    if (typeof logsAfter !== 'string' || logsAfter.trim().length === 0) {
+      return Response.json({ error: 'No current log content provided.' }, { status: 400 });
+    }
+    if (logsBefore.length > 25_000) {
+      return Response.json({ error: 'Reference log too large. Maximum 25,000 characters per log.' }, { status: 400 });
+    }
+    if (logsAfter.length > 25_000) {
+      return Response.json({ error: 'Current log too large. Maximum 25,000 characters per log.' }, { status: 400 });
+    }
+    systemPrompt = DIFF_SYSTEM_PROMPT;
+    userContent = `REFERENCE LOG (earlier/healthy):\n\`\`\`\n${redactLogPII(logsBefore)}\n\`\`\`\n\nCURRENT LOG (later/failing):\n\`\`\`\n${redactLogPII(logsAfter)}\n\`\`\``;
+  } else {
+    const logs = body.logs;
+    if (typeof logs !== 'string' || logs.trim().length === 0) {
+      return Response.json({ error: 'No log content provided.' }, { status: 400 });
+    }
+    if (logs.length > 50_000) {
+      return Response.json(
+        { error: 'Log content too large. Maximum 50,000 characters.' },
+        { status: 400 },
+      );
+    }
+    systemPrompt = SYSTEM_PROMPT;
+    userContent = `Analyze these logs:\n\n\`\`\`\n${redactLogPII(logs)}\n\`\`\``;
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -99,11 +151,11 @@ export async function POST(request: Request) {
         const msgStream = client.messages.stream({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 2048,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages: [
             {
               role: 'user',
-              content: `Analyze these logs:\n\n\`\`\`\n${redactedLogs}\n\`\`\``,
+              content: userContent,
             },
           ],
         });
