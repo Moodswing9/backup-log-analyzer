@@ -1,0 +1,30 @@
+{
+  "name": "backup-log-analyzer",
+  "version": "0.4.0",
+  "description": "AI-powered backup log analysis — /analyze-log delivers severity, root causes, and copy-pasteable fix commands via Claude Haiku. Single-log or diff mode to surface regressions between two captures. Supports PPDM, NetWorker, Data Domain, Veeam, syslog, and Windows Event Log.",
+  "author": {
+    "name": "Moodswing9",
+    "url": "https://github.com/Moodswing9"
+  },
+  "homepage": "https://github.com/Moodswing9/backup-log-analyzer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Moodswing9/backup-log-analyzer.git"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "backup",
+    "log-analysis",
+    "ppdm",
+    "networker",
+    "data-domain",
+    "veeam",
+    "claude-haiku",
+    "diff-mode",
+    "claude-skill"
+  ],
+  "components": {
+    "skills": ["./skills/backup-log-analyzer"],
+    "commands": ["./.claude/commands"]
+  }
+}

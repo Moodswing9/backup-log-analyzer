@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { redactLogPII } from '@/lib/redact';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -54,20 +55,6 @@ One paragraph diagnosing the most critical new issue, citing specific log eviden
 Specific, copy-pasteable remediation steps targeting the top regression. Use fenced code blocks for all shell commands.
 
 If logs are identical or no regressions found, say so clearly and assign INFO severity.`;
-
-// ── PII redaction ─────────────────────────────────────────────────────────────
-
-function redactLogPII(logs: string): string {
-  return logs
-    .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, 'Bearer [REDACTED]')
-    .replace(/Basic\s+[A-Za-z0-9+/]+=*/gi, 'Basic [REDACTED]')
-    .replace(
-      /("(?:password|passwd|secret|token|api_key|apikey|access_key|private_key)"\s*:\s*)"[^"]*"/gi,
-      '$1"[REDACTED]"',
-    )
-    .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
-    .replace(/\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b/g, '$1.x.x');
-}
 
 // ── Per-IP rate limiting ──────────────────────────────────────────────────────
 

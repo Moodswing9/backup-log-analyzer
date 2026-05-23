@@ -4,7 +4,7 @@
 
 **Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![Version](https://img.shields.io/badge/version-0.4.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ef4444?style=flat-square)](#license)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Haiku-f59e0b?style=flat-square)](#)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2016%20%7C%20TypeScript-3178c6?style=flat-square)](#stack)
@@ -19,6 +19,8 @@
 ## Overview
 
 Drop any log output into the textarea and hit **Analyze**. Claude Haiku 4.5 streams back a structured report with a color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands — all in a few seconds. No account required.
+
+**Diff Mode** — paste two log captures (before / after a change or outage) and get a regression analysis: issues that appeared, issues that resolved, and patterns that changed severity. Switch modes with the toggle above the textarea.
 
 Supports logs from:
 
@@ -44,6 +46,25 @@ The analysis opens with a color-coded severity badge:
 | 🟡 **MEDIUM** | Warnings that need attention soon |
 | 🟢 **LOW** | Minor issues with minimal impact |
 | 🔵 **INFO** | No problems detected |
+
+---
+
+## Claude Code Plugin
+
+Install as a Claude Code plugin to get `/analyze-log` directly in your terminal:
+
+```bash
+npx skills add Moodswing9/backup-log-analyzer -g
+```
+
+This registers the skill and command globally so you can run `/analyze-log` from any Claude Code session.
+
+| Command | What it does |
+|:---|:---|
+| `/analyze-log /var/log/ppdmwatch/ppdmwatch.log` | Analyse a single log file — severity, root cause, fix commands |
+| `/analyze-log /var/log/before.log --diff /var/log/after.log` | Diff mode — compare two captures to surface regressions |
+
+The skill auto-activates in Claude Code when you ask about log severity triage, PII redaction patterns, diff mode regression analysis, or the Next.js API route architecture — no command needed. Requires `ANTHROPIC_API_KEY` and `pip install anthropic`.
 
 ---
 
