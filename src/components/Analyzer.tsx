@@ -256,6 +256,17 @@ export default function Analyzer() {
               </p>
             )}
 
+            {loading && !analysis && (
+              <div className="flex items-center gap-2 py-1">
+                <span className="text-xs text-[#4a5568]">
+                  {mode === 'diff' ? 'Comparing' : 'Analyzing'}
+                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:300ms]" />
+              </div>
+            )}
+
             {analysis && (
               <div className="prose prose-sm prose-invert max-w-none">
                 <ReactMarkdown
@@ -293,6 +304,9 @@ export default function Analyzer() {
                 >
                   {analysis}
                 </ReactMarkdown>
+                {loading && (
+                  <span className="inline-block w-px h-4 bg-purple-400 animate-pulse align-middle ml-0.5" />
+                )}
               </div>
             )}
           </div>
