@@ -312,21 +312,44 @@ export default function Analyzer() {
           </div>
 
           {analysis && (
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(analysis).catch(() => {});
-              }}
-              className="
-                flex items-center justify-center gap-2 rounded-lg px-4 py-2
-                border border-[#1a2030] bg-[#0e1318] hover:border-purple-700/60
-                text-sm text-[#4a5568] hover:text-[#c8d6e5] transition-colors
-              "
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Copy Analysis
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(analysis).catch(() => {});
+                }}
+                className="
+                  flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2
+                  border border-[#1a2030] bg-[#0e1318] hover:border-purple-700/60
+                  text-sm text-[#4a5568] hover:text-[#c8d6e5] transition-colors
+                "
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy
+              </button>
+              <button
+                onClick={() => {
+                  const blob = new Blob([analysis], { type: 'text/markdown' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `analysis-${new Date().toISOString().slice(0, 10)}.md`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="
+                  flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2
+                  border border-[#1a2030] bg-[#0e1318] hover:border-purple-700/60
+                  text-sm text-[#4a5568] hover:text-[#c8d6e5] transition-colors
+                "
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download .md
+              </button>
+            </div>
           )}
         </div>
       </div>
