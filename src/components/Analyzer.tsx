@@ -35,6 +35,13 @@ const PLACEHOLDER_AFTER = `Paste the CURRENT log here (later / failing run).
 2026-05-11 03:14:25 ERROR  [PPDM] Protection job FAILED: policy=k8s-daily, failed=14
 2026-05-11 03:14:26 ERROR  [PPDM] vProxy unreachable: vproxy01.corp.local (timeout after 30s)`;
 
+function counterColor(len: number, limit: number): string {
+  const pct = len / limit;
+  if (pct >= 0.95) return 'text-red-400';
+  if (pct >= 0.80) return 'text-yellow-400';
+  return 'text-[#4a5568]';
+}
+
 type Mode = 'single' | 'diff';
 
 export default function Analyzer() {
@@ -149,7 +156,7 @@ export default function Analyzer() {
             <>
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-[#c8d6e5]">Log Input</label>
-                <span className="text-xs text-[#4a5568]">
+                <span className={`text-xs ${counterColor(logText.length, 50000)}`}>
                   {logText.length.toLocaleString()} / 50,000 chars
                 </span>
               </div>
@@ -169,7 +176,7 @@ export default function Analyzer() {
                   Reference Log
                   <span className="ml-2 text-xs text-[#4a5568] font-normal">earlier / last known good</span>
                 </label>
-                <span className="text-xs text-[#4a5568]">
+                <span className={`text-xs ${counterColor(logBefore.length, 25000)}`}>
                   {logBefore.length.toLocaleString()} / 25,000
                 </span>
               </div>
@@ -187,7 +194,7 @@ export default function Analyzer() {
                   Current Log
                   <span className="ml-2 text-xs text-[#4a5568] font-normal">later / failing run</span>
                 </label>
-                <span className="text-xs text-[#4a5568]">
+                <span className={`text-xs ${counterColor(logAfter.length, 25000)}`}>
                   {logAfter.length.toLocaleString()} / 25,000
                 </span>
               </div>
