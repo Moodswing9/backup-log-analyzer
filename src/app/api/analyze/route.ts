@@ -1,7 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { redactLogPII } from '@/lib/redact';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  defaultHeaders: { 'anthropic-beta': 'prompt-caching-2024-07-31' },
+});
 
 const SYSTEM_PROMPT = `You are a senior infrastructure engineer specializing in backup and data protection systems (Dell EMC NetWorker, PowerProtect Data Manager, Veeam, Commvault, and generic Linux/Windows servers).
 
@@ -136,9 +139,9 @@ export async function POST(request: Request) {
       const enc = new TextEncoder();
       try {
         const msgStream = client.messages.stream({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-opus-4-7',
           max_tokens: 2048,
-          system: systemPrompt,
+          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }] as any,
           messages: [
             {
               role: 'user',
