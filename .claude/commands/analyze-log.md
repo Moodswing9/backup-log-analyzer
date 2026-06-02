@@ -121,9 +121,9 @@ else:
     user_content = f'Analyze these logs:\n\n```\n{primary}\n```'
 
 with client.messages.stream(
-    model='claude-haiku-4-5-20251001',
+    model='claude-opus-4-7',
     max_tokens=2048,
-    system=system,
+    system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
     messages=[{'role': 'user', 'content': user_content}],
 ) as stream:
     for text in stream.text_stream:
