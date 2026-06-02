@@ -17,6 +17,14 @@
 
 ---
 
+<div align="center">
+
+![Backup Log Analyzer — live analysis dashboard](docs/screenshot.png)
+
+</div>
+
+---
+
 ## Overview
 
 Drop any log output into the textarea and hit **Analyze**. Claude Opus 4.7 streams back a structured report with a color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands — all in a few seconds. No account required.
