@@ -1,10 +1,10 @@
-<div align="center">
+﻿<div align="center">
 
 # 🔍 Backup Log Analyzer
 
 **Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![Version](https://img.shields.io/badge/version-0.4.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Moodswing9/backup-log-analyzer/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Moodswing9/backup-log-analyzer/actions/workflows/ci.yml)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Opus%204.7-f59e0b?style=flat-square)](#)
