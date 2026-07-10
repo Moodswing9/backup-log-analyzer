@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { redactLogPII } from '@/lib/redact';
+import { classifyLog, type TaxonomyMatch } from '@/lib/error-taxonomy';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -58,6 +59,35 @@ One paragraph diagnosing the most critical new issue, citing specific log eviden
 Specific, copy-pasteable remediation steps targeting the top regression. Use fenced code blocks for all shell commands.
 
 If logs are identical or no regressions found, say so clearly and assign INFO severity.`;
+
+// ── Taxonomy formatter ────────────────────────────────────────────────────────
+
+function formatTaxonomyResult(match: TaxonomyMatch): string {
+  const fixBlock = match.fixCommands.map((cmd) => cmd).join('\n');
+  return [
+    `## Severity: ${match.severity}`,
+    '',
+    '## Summary',
+    `Matched known error pattern **${match.errorCode}** (${match.title}). This is a high-confidence taxonomy match — no AI inference required.`,
+    '',
+    '## Issues Detected',
+    `1. **[${match.errorCode}] ${match.title}** — deterministic pattern match on known ${match.product} error signature.`,
+    '',
+    '## Root Causes',
+    match.rootCause,
+    '',
+    '## Recommended Actions',
+    '```',
+    fixBlock,
+    '```',
+    '',
+    '## Prevention',
+    'Add this error pattern to your monitoring alerts so future occurrences are caught before jobs fail.',
+    '',
+    `---`,
+    `*Classified by offline error taxonomy. Error code: \`${match.errorCode}\`. Product: ${match.product}. Confidence: high — no API call used.*`,
+  ].join('\n');
+}
 
 // ── Per-IP rate limiting ──────────────────────────────────────────────────────
 
@@ -130,6 +160,20 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // Taxonomy fast-path: check before spending an AI call
+    const taxonomyResult = classifyLog(logs);
+    if (taxonomyResult.matched && taxonomyResult.match) {
+      const markdown = formatTaxonomyResult(taxonomyResult.match);
+      return new Response(markdown, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Classification-Source': 'taxonomy',
+          'X-Error-Code': taxonomyResult.match.errorCode,
+        },
+      });
+    }
+
     systemPrompt = SYSTEM_PROMPT;
     userContent = `Analyze these logs:\n\n\`\`\`\n${redactLogPII(logs)}\n\`\`\``;
   }
