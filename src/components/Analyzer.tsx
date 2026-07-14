@@ -42,13 +42,19 @@ function counterColor(len: number, limit: number): string {
   return 'text-[#4a5568]';
 }
 
-type Mode = 'single' | 'diff';
+type Mode = 'single' | 'diff' | 'batch';
+
+interface BatchFile {
+  name: string;
+  content: string;
+}
 
 export default function Analyzer() {
   const [mode, setMode]           = useState<Mode>('single');
   const [logText, setLogText]     = useState('');
   const [logBefore, setLogBefore] = useState('');
   const [logAfter, setLogAfter]   = useState('');
+  const [batchFiles, setBatchFiles] = useState<BatchFile[]>([{ name: '', content: '' }]);
   const [analysis, setAnalysis]   = useState('');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
@@ -60,7 +66,69 @@ export default function Analyzer() {
     setError('');
   }, []);
 
+  const addBatchFile = useCallback(() => {
+    setBatchFiles(prev => prev.length < 5 ? [...prev, { name: '', content: '' }] : prev);
+  }, []);
+
+  const updateBatchFile = useCallback((index: number, field: keyof BatchFile, value: string) => {
+    setBatchFiles(prev => prev.map((f, i) => i === index ? { ...f, [field]: value } : f));
+  }, []);
+
+  const removeBatchFile = useCallback((index: number) => {
+    setBatchFiles(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
+  }, []);
+
+  const handleBatchFileUpload = useCallback((index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string ?? '';
+      setBatchFiles(prev => prev.map((f, i) => i === index ? { name: file.name, content } : f));
+    };
+    reader.readAsText(file);
+  }, []);
+
   const analyze = useCallback(async () => {
+    if (mode === 'batch') {
+      const validFiles = batchFiles.filter(f => f.content.trim().length > 0);
+      if (validFiles.length === 0) return;
+
+      setLoading(true);
+      setAnalysis('');
+      setError('');
+
+      try {
+        const filesPayload = batchFiles.map((f, i) => ({
+          name: f.name.trim() || `file-${i + 1}.log`,
+          content: f.content,
+        })).filter(f => f.content.trim().length > 0);
+
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'batch', files: filesPayload }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error ?? 'Batch analysis failed.');
+          return;
+        }
+
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          setAnalysis(prev => prev + decoder.decode(value, { stream: true }));
+        }
+      } catch {
+        setError('Network error — could not reach the analysis endpoint.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const ready = mode === 'single'
       ? logText.trim().length > 0
       : logBefore.trim().length > 0 && logAfter.trim().length > 0;
@@ -100,11 +168,13 @@ export default function Analyzer() {
     } finally {
       setLoading(false);
     }
-  }, [mode, logText, logBefore, logAfter]);
+  }, [mode, logText, logBefore, logAfter, batchFiles]);
 
-  const isReady = mode === 'single'
-    ? logText.trim().length > 0
-    : logBefore.trim().length > 0 && logAfter.trim().length > 0;
+  const isReady = mode === 'batch'
+    ? batchFiles.some(f => f.content.trim().length > 0)
+    : mode === 'single'
+      ? logText.trim().length > 0
+      : logBefore.trim().length > 0 && logAfter.trim().length > 0;
 
   const severity = extractSeverity(analysis);
   const severityStyle = severity ? SEVERITY_STYLES[severity] : null;
@@ -119,7 +189,7 @@ export default function Analyzer() {
   return (
     <div className="flex flex-col gap-6">
       {/* Mode toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-[#4a5568] mr-1">Mode:</span>
         <button
           onClick={() => switchMode('single')}
@@ -129,7 +199,7 @@ export default function Analyzer() {
               : 'border border-[#1a2030] bg-[#0e1318] text-[#4a5568] hover:text-[#c8d6e5]'
           }`}
         >
-          Single Log
+          Single File
         </button>
         <button
           onClick={() => switchMode('diff')}
@@ -141,9 +211,24 @@ export default function Analyzer() {
         >
           Diff Mode
         </button>
+        <button
+          onClick={() => switchMode('batch')}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none ${
+            mode === 'batch'
+              ? 'bg-purple-700 text-white'
+              : 'border border-[#1a2030] bg-[#0e1318] text-[#4a5568] hover:text-[#c8d6e5]'
+          }`}
+        >
+          Batch (up to 5 files)
+        </button>
         {mode === 'diff' && (
           <span className="text-xs text-[#4a5568]">
             — paste two logs to identify regressions
+          </span>
+        )}
+        {mode === 'batch' && (
+          <span className="text-xs text-[#4a5568]">
+            — analyze up to 5 log files at once
           </span>
         )}
       </div>
@@ -168,7 +253,7 @@ export default function Analyzer() {
                 className={`h-96 lg:h-[480px] ${textareaBase}`}
               />
             </>
-          ) : (
+          ) : mode === 'diff' ? (
             <>
               {/* Reference log */}
               <div className="flex items-center justify-between">
@@ -206,6 +291,73 @@ export default function Analyzer() {
                 className={`h-44 lg:h-[220px] ${textareaBase}`}
               />
             </>
+          ) : (
+            /* Batch mode */
+            <div className="flex flex-col gap-4">
+              {batchFiles.map((file, index) => (
+                <div key={index} className="flex flex-col gap-2 rounded-lg border border-[#1a2030] bg-[#0a0f1a] p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#4a5568] font-mono">#{index + 1}</span>
+                    <input
+                      type="text"
+                      value={file.name}
+                      onChange={e => updateBatchFile(index, 'name', e.target.value)}
+                      placeholder="filename.log"
+                      className="
+                        flex-1 rounded border border-[#1a2030] bg-[#0e1318] px-2 py-1
+                        font-mono text-xs text-[#c8d6e5] placeholder:text-[#2a3548]
+                        focus:border-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-700/40
+                      "
+                    />
+                    <label className="cursor-pointer rounded border border-[#1a2030] bg-[#0e1318] px-2 py-1 text-xs text-[#4a5568] hover:text-[#c8d6e5] transition-colors">
+                      Upload
+                      <input
+                        type="file"
+                        accept="text/*,.log,.txt"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) handleBatchFileUpload(index, f);
+                        }}
+                      />
+                    </label>
+                    {batchFiles.length > 1 && (
+                      <button
+                        onClick={() => removeBatchFile(index)}
+                        className="text-xs text-[#4a5568] hover:text-red-400 transition-colors px-1"
+                        title="Remove this file"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={file.content}
+                    onChange={e => updateBatchFile(index, 'content', e.target.value)}
+                    placeholder="Paste log content here…"
+                    spellCheck={false}
+                    className={`h-32 ${textareaBase}`}
+                  />
+                  <span className={`text-xs self-end ${counterColor(file.content.length, 50000)}`}>
+                    {file.content.length.toLocaleString()} chars
+                  </span>
+                </div>
+              ))}
+              {batchFiles.length < 5 && (
+                <button
+                  onClick={addBatchFile}
+                  className="
+                    flex items-center justify-center gap-2 rounded-lg px-4 py-2
+                    border border-dashed border-[#1a2030] bg-[#0a0f1a]
+                    text-xs text-[#4a5568] hover:text-[#c8d6e5] hover:border-purple-700/40
+                    transition-colors focus:outline-none
+                  "
+                >
+                  + Add File
+                  <span className="text-[#2a3548]">({batchFiles.length}/5)</span>
+                </button>
+              )}
+            </div>
           )}
 
           <button
@@ -221,14 +373,14 @@ export default function Analyzer() {
             {loading ? (
               <>
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                {mode === 'diff' ? 'Comparing…' : 'Analyzing…'}
+                {mode === 'diff' ? 'Comparing…' : mode === 'batch' ? 'Analyzing Batch…' : 'Analyzing…'}
               </>
             ) : (
               <>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.695-1.405 2.695H4.203c-1.436 0-2.405-1.695-1.405-2.695L4.2 15.3" />
                 </svg>
-                {mode === 'diff' ? 'Compare Logs' : 'Analyze Logs'}
+                {mode === 'diff' ? 'Compare Logs' : mode === 'batch' ? 'Analyze Batch' : 'Analyze Logs'}
               </>
             )}
           </button>
@@ -238,7 +390,7 @@ export default function Analyzer() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-[#c8d6e5]">
-              {mode === 'diff' ? 'Diff Analysis' : 'Analysis'}
+              {mode === 'diff' ? 'Diff Analysis' : mode === 'batch' ? 'Batch Analysis' : 'Analysis'}
             </label>
             {severityStyle && (
               <span className={`flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold ${severityStyle.bg} ${severityStyle.text}`}>
@@ -260,14 +412,16 @@ export default function Analyzer() {
               <p className="text-sm text-[#2a3548] italic">
                 {mode === 'diff'
                   ? 'Paste both logs and click Compare — regressions, resolved issues, and changed patterns will stream here.'
-                  : 'Analysis will stream here once you paste logs and click Analyze.'}
+                  : mode === 'batch'
+                    ? 'Add up to 5 log files and click Analyze Batch — a consolidated report will appear here.'
+                    : 'Analysis will stream here once you paste logs and click Analyze.'}
               </p>
             )}
 
             {loading && !analysis && (
               <div className="flex items-center gap-2 py-1">
                 <span className="text-xs text-[#4a5568]">
-                  {mode === 'diff' ? 'Comparing' : 'Analyzing'}
+                  {mode === 'diff' ? 'Comparing' : mode === 'batch' ? 'Analyzing batch' : 'Analyzing'}
                 </span>
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:0ms]" />
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-bounce [animation-delay:150ms]" />

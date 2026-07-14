@@ -120,11 +120,66 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { logs?: unknown; logsBefore?: unknown; logsAfter?: unknown; mode?: unknown };
+  let body: { logs?: unknown; logsBefore?: unknown; logsAfter?: unknown; mode?: unknown; files?: unknown };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON body.' }, { status: 400 });
+  }
+
+  // ── Batch mode ─────────────────────────────────────────────────────────────
+  if (body.mode === 'batch') {
+    if (!Array.isArray(body.files) || body.files.length === 0) {
+      return Response.json({ error: 'Batch mode requires a non-empty files array.' }, { status: 400 });
+    }
+    if (body.files.length > 5) {
+      return Response.json({ error: 'Batch mode supports a maximum of 5 files.' }, { status: 400 });
+    }
+    // Validate each entry
+    for (const f of body.files) {
+      if (typeof f !== 'object' || f === null || typeof (f as Record<string, unknown>).name !== 'string' || typeof (f as Record<string, unknown>).content !== 'string') {
+        return Response.json({ error: 'Each file must have a string name and string content.' }, { status: 400 });
+      }
+    }
+
+    const files = body.files as Array<{ name: string; content: string }>;
+
+    // Process each file: taxonomy fast-path then Claude
+    const fileSections: string[] = [];
+    for (const file of files) {
+      const content = file.content;
+      const taxonomyResult = classifyLog(content);
+      if (taxonomyResult.matched && taxonomyResult.match) {
+        fileSections.push(`## File: ${file.name}\n\n${formatTaxonomyResult(taxonomyResult.match)}`);
+      } else {
+        // Call Claude for this file
+        const userContent = `Analyze these logs:\n\n\`\`\`\n${redactLogPII(content)}\n\`\`\``;
+        let fileAnalysis = '';
+        try {
+          const msg = await client.messages.create({
+            model: 'claude-opus-4-7',
+            max_tokens: 2048,
+            system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }] as any,
+            messages: [{ role: 'user', content: userContent }],
+          });
+          const block = msg.content[0];
+          fileAnalysis = block.type === 'text' ? block.text : '';
+        } catch (err) {
+          fileAnalysis = err instanceof Error && err.message.includes('429')
+            ? '**Error:** API rate limit reached. Please try again in a moment.'
+            : '**Error:** Analysis failed. Check your API key and try again.';
+        }
+        fileSections.push(`## File: ${file.name}\n\n${fileAnalysis}`);
+      }
+    }
+
+    const consolidated = `# Batch Analysis Results\n\n${fileSections.join('\n\n---\n\n')}`;
+    return new Response(consolidated, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
   }
 
   const isDiff = body.mode === 'diff';
