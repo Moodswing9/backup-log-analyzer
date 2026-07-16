@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import {
+  saveToHistory,
+  loadHistory,
+  deleteFromHistory,
+  clearHistory,
+  HistoryEntry,
+} from '@/lib/history';
 
 const SEVERITY_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
   CRITICAL: { bg: 'bg-red-950/60', text: 'text-red-400', dot: 'bg-red-500' },
@@ -49,6 +56,21 @@ interface BatchFile {
   content: string;
 }
 
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const day = d.getDate();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  return `${month} ${day}, ${hours}:${mins}`;
+}
+
+const MODE_BADGE: Record<string, string> = {
+  single: 'Single',
+  diff: 'Diff',
+  batch: 'Batch',
+};
+
 export default function Analyzer() {
   const [mode, setMode]           = useState<Mode>('single');
   const [logText, setLogText]     = useState('');
@@ -59,6 +81,12 @@ export default function Analyzer() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const [copied, setCopied]       = useState(false);
+  const [history, setHistory]     = useState<HistoryEntry[]>([]);
+  const resultPanelRef            = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const switchMode = useCallback((next: Mode) => {
     setMode(next);
@@ -96,6 +124,7 @@ export default function Analyzer() {
       setAnalysis('');
       setError('');
 
+      let accumulated = '';
       try {
         const filesPayload = batchFiles.map((f, i) => ({
           name: f.name.trim() || `file-${i + 1}.log`,
@@ -119,12 +148,18 @@ export default function Analyzer() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          setAnalysis(prev => prev + decoder.decode(value, { stream: true }));
+          const chunk = decoder.decode(value, { stream: true });
+          accumulated += chunk;
+          setAnalysis(prev => prev + chunk);
         }
       } catch {
         setError('Network error — could not reach the analysis endpoint.');
       } finally {
         setLoading(false);
+        if (accumulated.trim().length > 0) {
+          const entry = saveToHistory({ label: 'Batch analysis', mode: 'batch', result: accumulated });
+          setHistory(prev => [entry, ...prev].slice(0, 20));
+        }
       }
       return;
     }
@@ -138,6 +173,7 @@ export default function Analyzer() {
     setAnalysis('');
     setError('');
 
+    let accumulated = '';
     try {
       const body = mode === 'diff'
         ? { mode: 'diff', logsBefore: logBefore, logsAfter: logAfter }
@@ -161,12 +197,22 @@ export default function Analyzer() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        setAnalysis(prev => prev + decoder.decode(value, { stream: true }));
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+        setAnalysis(prev => prev + chunk);
       }
     } catch {
       setError('Network error — could not reach the analysis endpoint.');
     } finally {
       setLoading(false);
+      if (accumulated.trim().length > 0) {
+        const sourceText = mode === 'single' ? logText : logBefore;
+        const autoLabel = mode === 'diff'
+          ? 'Diff analysis'
+          : (sourceText.split('\n').find(l => l.trim().length > 0) ?? 'Analysis').slice(0, 80);
+        const entry = saveToHistory({ label: autoLabel, mode, result: accumulated });
+        setHistory(prev => [entry, ...prev].slice(0, 20));
+      }
     }
   }, [mode, logText, logBefore, logAfter, batchFiles]);
 
@@ -387,7 +433,7 @@ export default function Analyzer() {
         </div>
 
         {/* Analysis output */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" ref={resultPanelRef}>
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-[#c8d6e5]">
               {mode === 'diff' ? 'Diff Analysis' : mode === 'batch' ? 'Batch Analysis' : 'Analysis'}
@@ -528,6 +574,63 @@ export default function Analyzer() {
           )}
         </div>
       </div>
+
+      {/* History panel */}
+      {history.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-lg border border-[#1a2030] bg-[#0a0f1a] p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-[#c8d6e5]">
+              History
+              <span className="ml-2 text-xs text-[#4a5568] font-normal">
+                ({history.length}/{20})
+              </span>
+            </span>
+            <button
+              onClick={() => { clearHistory(); setHistory([]); }}
+              className="text-xs text-[#4a5568] hover:text-red-400 transition-colors focus:outline-none"
+            >
+              Clear All
+            </button>
+          </div>
+          <ul className="flex flex-col gap-1">
+            {history.map(entry => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-2 rounded-md border border-[#1a2030] bg-[#0e1318] px-3 py-2"
+              >
+                <span className="shrink-0 text-xs text-[#4a5568] font-mono w-28">
+                  {formatTimestamp(entry.timestamp)}
+                </span>
+                <span className="flex-1 truncate text-xs text-[#8a9ab8]" title={entry.label}>
+                  {entry.label.length > 40 ? entry.label.slice(0, 40) + '…' : entry.label}
+                </span>
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-purple-950/60 text-purple-400">
+                  {MODE_BADGE[entry.mode]}
+                </span>
+                <button
+                  onClick={() => {
+                    setAnalysis(entry.result);
+                    resultPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="shrink-0 text-xs text-[#4a5568] hover:text-[#c8d6e5] transition-colors focus:outline-none"
+                >
+                  Load
+                </button>
+                <button
+                  onClick={() => {
+                    deleteFromHistory(entry.id);
+                    setHistory(prev => prev.filter(e => e.id !== entry.id));
+                  }}
+                  className="shrink-0 text-xs text-[#4a5568] hover:text-red-400 transition-colors focus:outline-none"
+                  title="Delete"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
