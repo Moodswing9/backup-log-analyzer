@@ -1,6 +1,6 @@
 {
   "name": "backup-log-analyzer",
-  "version": "0.4.0",
+  "version": "0.7.1",
   "description": "AI-powered backup log analysis — /analyze-log delivers severity, root causes, and copy-pasteable fix commands via Claude Haiku. Single-log or diff mode to surface regressions between two captures. Supports PPDM, NetWorker, Data Domain, Veeam, syslog, and Windows Event Log.",
   "author": {
     "name": "Moodswing9",

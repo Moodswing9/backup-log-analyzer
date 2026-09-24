@@ -4,7 +4,7 @@
 
 **Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
 
-[![Version](https://img.shields.io/badge/version-0.4.0-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![Version](https://img.shields.io/badge/version-0.7.1-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Moodswing9/backup-log-analyzer/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Moodswing9/backup-log-analyzer/actions/workflows/ci.yml)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Opus%204.7-f59e0b?style=flat-square)](#)
@@ -30,6 +30,12 @@
 Drop any log output into the textarea and hit **Analyze**. Claude Opus 4.7 streams back a structured report with a color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands — all in a few seconds. No account required.
 
 **Diff Mode** — paste two log captures (before / after a change or outage) and get a regression analysis: issues that appeared, issues that resolved, and patterns that changed severity. Switch modes with the toggle above the textarea.
+
+**Batch Mode** — analyze up to 5 log files in one run (upload or paste). Each file gets its own section in a single consolidated report.
+
+**Offline error taxonomy** — 12 known PPDM, NetWorker and Data Domain error patterns are classified instantly, with root cause and fix commands, without calling the API. Anything unrecognized falls through to Claude.
+
+**History** — your last 20 analyses are kept in the browser (`localStorage`) and can be reloaded with one click.
 
 Supports logs from:
 

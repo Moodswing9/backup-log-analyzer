@@ -1,7 +1,9 @@
+import { version } from '../../../../package.json';
+
 export async function GET() {
   return Response.json({
     status: 'ok',
-    version: '0.3.0',
+    version,
     ts: new Date().toISOString(),
   });
 }

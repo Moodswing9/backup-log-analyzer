@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 10;
