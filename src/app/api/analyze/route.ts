@@ -159,7 +159,7 @@ export async function POST(request: Request) {
           const msg = await client.messages.create({
             model: 'claude-opus-4-7',
             max_tokens: 2048,
-            system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }] as any,
+            system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: userContent }],
           });
           const block = msg.content[0];
@@ -240,7 +240,7 @@ export async function POST(request: Request) {
         const msgStream = client.messages.stream({
           model: 'claude-opus-4-7',
           max_tokens: 2048,
-          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }] as any,
+          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
           messages: [
             {
               role: 'user',

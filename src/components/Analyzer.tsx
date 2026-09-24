@@ -85,6 +85,8 @@ export default function Analyzer() {
   const resultPanelRef            = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // localStorage is client-only; loading after mount keeps SSR and hydration output identical.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(loadHistory());
   }, []);
 
