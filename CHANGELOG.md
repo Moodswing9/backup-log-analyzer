@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+### Changed
+- Upgrade `vitest` and `@vitest/coverage-v8` 2.1.9 → 5.0.1 (vite 5 → 8), clearing the remaining dev-dependency advisories — `npm audit` now reports 0 vulnerabilities
+- Require Node.js ≥ 22.12 (`engines`); CI matrix moves from Node 20/22 to 22/24 (Node 20 is end-of-life). `@types/node` → ^22
+
 ## [0.7.1] — 2026-09-24
 ### Security
 - Upgrade `next` and `eslint-config-next` 16.2.6 → 16.3.6, fixing critical/high Next.js advisories (Image Optimization RCE, Middleware/Proxy bypass, SSRF, cache confusion) and the bundled `sharp`, `postcss` and `nanoid` advisories — `npm audit --omit=dev` now reports 0 vulnerabilities
