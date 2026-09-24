@@ -89,7 +89,7 @@ The live version at [backup-log-analyzer.vercel.app](https://backup-log-analyzer
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22.12+
 - An [Anthropic API key](https://console.anthropic.com/)
 
 ### Setup
