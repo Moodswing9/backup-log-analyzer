@@ -1,8 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.2] — 2026-10-08
+### Security
+- Upgrade `next` and `eslint-config-next` 16.3.6 → 16.3.8: fixes SSRF in Image Optimization, SSG/ISR cache poisoning, Draft Mode leakage via `use cache`, metadata image route disclosure and dev-server MCP endpoint disclosure (GHSA-cjq9-62q9-8jv4, GHSA-mcj8-r9mp-w47p, GHSA-4jqv-mc3x-m676, GHSA-3w37-wq28-93x7, GHSA-f87g-xv8r-7p7x, GHSA-39w2-rjm5-chcv)
+- `npm audit fix` for `sharp` (librsvg CVE) and `source-map-js`; `npm audit --omit=dev` reports 0 vulnerabilities
+- Known, dev-only: `braces` advisory GHSA-vfj7-8cjw-p6xm via the ESLint toolchain has no fixed release yet
+
 ### Changed
-- Upgrade `vitest` and `@vitest/coverage-v8` 2.1.9 → 5.0.1 (vite 5 → 8), clearing the remaining dev-dependency advisories — `npm audit` now reports 0 vulnerabilities
+- Upgrade `vitest` and `@vitest/coverage-v8` 2.1.9 → 5.0.1 (vite 5 → 8), clearing the vitest/vite dev-dependency advisories
 - Require Node.js ≥ 22.12 (`engines`); CI matrix moves from Node 20/22 to 22/24 (Node 20 is end-of-life). `@types/node` → ^22
 
 ## [0.7.1] — 2026-09-24
