@@ -1,6 +1,6 @@
 {
   "name": "backup-log-analyzer",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "engines": {
     "node": ">=22.12"

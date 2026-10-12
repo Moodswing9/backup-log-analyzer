@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.3] — 2026-10-12
+### Fixed
+- Claude Code plugin manifest passes `claude plugin validate`: `repository` is a URL, `license` is MIT and the unsupported `components` field is gone; the `/analyze-log` command in `.claude/commands/` is now declared, so it loads
+- Install docs: the plugin is now installed from the Moodswing9 marketplace (`claude plugin marketplace add Moodswing9/claude-plugins`, then `claude plugin install backup-log-analyzer@moodswing9`). The previously documented `npx skills add` installs only the skill, not the slash commands
+
+### Added
+- CI validates the plugin manifest on every push and pull request
+
 ## [0.7.2] — 2026-10-08
 ### Security
 - Upgrade `next` and `eslint-config-next` 16.3.6 → 16.3.8: fixes SSRF in Image Optimization, SSG/ISR cache poisoning, Draft Mode leakage via `use cache`, metadata image route disclosure and dev-server MCP endpoint disclosure (GHSA-cjq9-62q9-8jv4, GHSA-mcj8-r9mp-w47p, GHSA-4jqv-mc3x-m676, GHSA-3w37-wq28-93x7, GHSA-f87g-xv8r-7p7x, GHSA-39w2-rjm5-chcv)

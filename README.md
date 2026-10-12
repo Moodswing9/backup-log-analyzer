@@ -4,7 +4,7 @@
 
 **Paste any backup or infrastructure log — Claude identifies errors, root causes, and fix commands in seconds**
 
-[![Version](https://img.shields.io/badge/version-0.7.2-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
+[![Version](https://img.shields.io/badge/version-0.7.3-6366f1?style=flat-square)](https://github.com/Moodswing9/backup-log-analyzer/releases)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Moodswing9/backup-log-analyzer/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Moodswing9/backup-log-analyzer/actions/workflows/ci.yml)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20Opus%204.7-f59e0b?style=flat-square)](#)
@@ -68,11 +68,18 @@ The analysis opens with a color-coded severity badge:
 
 Install as a Claude Code plugin to get `/analyze-log` directly in your terminal:
 
+From a terminal:
+
 ```bash
-npx skills add Moodswing9/backup-log-analyzer -g
+claude plugin marketplace add Moodswing9/claude-plugins
+claude plugin install backup-log-analyzer@moodswing9
 ```
 
-This registers the skill and command globally so you can run `/analyze-log` from any Claude Code session.
+This installs `/analyze-log` and the skill.
+
+Or inside Claude Code: `/plugin marketplace add Moodswing9/claude-plugins`, then `/plugin install backup-log-analyzer@moodswing9`.
+
+Only need the knowledge skill, without the slash commands? `npx skills add Moodswing9/backup-log-analyzer -g` installs just the skill.
 
 | Command | What it does |
 |:---|:---|
