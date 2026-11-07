@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.4] — 2026-11-07
+### Security
+- `next` and `eslint-config-next` 16.3.8 → 16.4.5: fixes critical unauthenticated remote code execution in `use cache` functions and further high-severity Next.js advisories; `npm audit --omit=dev` reports 0 vulnerabilities
+- `vitest` / `@vitest/coverage-v8` → 5.1.0 and `vite` → 8.3.6 (dev): code injection via manual mock registration, and files outside `server.fs.allow` being served
+- Known, dev-only: `minimatch` (moderate) via the ESLint toolchain; npm's only suggested fix is downgrading `eslint-config-next` to 15
+
 ## [0.7.3] — 2026-10-12
 ### Fixed
 - Claude Code plugin manifest passes `claude plugin validate`: `repository` is a URL, `license` is MIT and the unsupported `components` field is gone; the `/analyze-log` command in `.claude/commands/` is now declared, so it loads
