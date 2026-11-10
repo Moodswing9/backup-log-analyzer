@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.5] — 2026-11-10
+### Security
+- `minimatch` 10.2.6 → 11.0.5 under `@typescript-eslint/typescript-estree` via a scoped npm `overrides` entry: fixes GHSA-g3hv-75wg-m249 (moderate, ReDoS via globparts amplification). Upstream typescript-eslint still pins `^10`, so the override stays until it moves to 11. Dev-only; `npm audit` now reports 0 vulnerabilities including dev dependencies
+
+### Changed
+- `next` and `eslint-config-next` 16.4.5 → 16.4.6 (patch release)
+
 ## [0.7.4] — 2026-11-07
 ### Security
 - `next` and `eslint-config-next` 16.3.8 → 16.4.5: fixes critical unauthenticated remote code execution in `use cache` functions and further high-severity Next.js advisories; `npm audit --omit=dev` reports 0 vulnerabilities
