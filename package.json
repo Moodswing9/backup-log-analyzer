@@ -1,6 +1,6 @@
 {
   "name": "backup-log-analyzer",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "private": true,
   "engines": {
     "node": ">=22.12"
@@ -31,5 +31,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.5"
+    }
   }
 }

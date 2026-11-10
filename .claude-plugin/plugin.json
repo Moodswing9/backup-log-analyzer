@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "backup-log-analyzer",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "AI-powered backup log analysis — /analyze-log delivers severity, root causes and copy-pasteable fix commands via Claude Opus 4.7. Single-log or diff mode to surface regressions between two captures. Supports PPDM, NetWorker, Data Domain, Veeam, syslog and Windows Event Log.",
   "author": {
     "name": "Moodswing9",
