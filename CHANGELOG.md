@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0] — 2026-11-10
+### Changed
+- Analyses run on **Claude Opus 5.5** (`claude-opus-5-5`) instead of Opus 4.7, in the web app and in `/analyze-log`. Opus 5.5 always thinks before answering, so effort is set to `low`: measured on two NetWorker/PPDM logs, that kept the cost per analysis ($0.043–0.051) and the time to first words (under 1 s) in line with Opus 4.7 and gave the same diagnoses, while the default effort (`medium`) doubled the cost and delayed the first words by 15–20 s
+- `max_tokens` 2048 → 8000, because thinking and the report share the limit
+- `@anthropic-ai/sdk` 0.95 → 1.7 (API version `2026-10-21`; the SDK now sends the key as `Authorization: Bearer`)
+- Removed the obsolete `anthropic-beta: prompt-caching-2024-07-31` header; prompt caching is generally available and still on
+
+### Fixed
+- Batch mode read only the first content block, which on a thinking model is the (empty) thinking block, so each file's analysis would have come back blank. It now joins the text blocks
+- Refusals are handled: if Claude declines, the request is retried on a fallback model (`fallbacks: "default"`), and if that declines too the user gets a clear message instead of an empty report. A report cut off at the length limit says so
+
+### Added
+- Unit tests for the request settings and the report-text extraction (44 tests in total)
+
 ## [0.7.5] — 2026-11-10
 ### Security
 - `minimatch` 10.2.6 → 11.0.5 under `@typescript-eslint/typescript-estree` via a scoped npm `overrides` entry: fixes GHSA-g3hv-75wg-m249 (moderate, ReDoS via globparts amplification). Upstream typescript-eslint still pins `^10`, so the override stays until it moves to 11. Dev-only; `npm audit` now reports 0 vulnerabilities including dev dependencies

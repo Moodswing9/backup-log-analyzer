@@ -120,15 +120,23 @@ else:
     system = SYSTEM_SINGLE
     user_content = f'Analyze these logs:\n\n```\n{primary}\n```'
 
+# Opus 5.5 always thinks; low effort keeps cost and speed in line with the web app.
+# extra_body works with any installed anthropic version (older ones lack output_config).
 with client.messages.stream(
-    model='claude-opus-4-7',
-    max_tokens=2048,
+    model='claude-opus-5-5',
+    max_tokens=8000,
+    extra_body={'output_config': {'effort': 'low'}},
     system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
     messages=[{'role': 'user', 'content': user_content}],
 ) as stream:
     for text in stream.text_stream:
         print(text, end='', flush=True)
+    final = stream.get_final_message()
 print()
+if final.stop_reason == 'refusal':
+    print('Claude declined to analyze this log. Remove unrelated or sensitive content and try again.')
+elif final.stop_reason == 'max_tokens':
+    print('Note: the report was cut off at the length limit.')
 PYEOF
 ```
 
