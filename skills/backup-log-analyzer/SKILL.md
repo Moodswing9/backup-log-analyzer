@@ -1,11 +1,11 @@
 ---
 name: backup-log-analyzer
-description: AI-powered backup log analysis — single-log severity report or diff mode to surface regressions between two captures. Claude Opus 4.7 streaming via Next.js 16 API route with prompt caching, PII redaction, and rate limiting. /analyze-log terminal command included.
+description: AI-powered backup log analysis — single-log severity report or diff mode to surface regressions between two captures. Claude Opus 5.5 streaming via Next.js 16 API route with prompt caching, PII redaction, and rate limiting. /analyze-log terminal command included.
 ---
 
 # Backup Log Analyzer
 
-Paste any backup or infrastructure log → Claude Opus 4.7 streams back a structured report: color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands. System prompt is prompt-cached for reduced latency on repeated analyses. Live SaaS at `backup-log-analyzer.vercel.app`. Also available as `/analyze-log` in Claude Code.
+Paste any backup or infrastructure log → Claude Opus 5.5 streams back a structured report: color-coded severity badge, numbered issues, root causes, and copy-pasteable remediation commands. System prompt is prompt-cached for reduced latency on repeated analyses. Live SaaS at `backup-log-analyzer.vercel.app`. Also available as `/analyze-log` in Claude Code.
 
 ## Trigger
 
@@ -69,10 +69,10 @@ Two captures → regression analysis: what appeared, what resolved, what changed
 1. Validate input (max chars, required fields for mode)
 2. PII redaction (server-side, before Claude call)
 3. Rate limit check — 10 req/min per source IP, sliding window, in-memory
-4. Stream `claude-haiku-4-5-20251001` via `ReadableStream`
+4. Stream `claude-opus-5-5` via `ReadableStream`
 5. Return `Content-Type: text/plain; charset=utf-8` — client reads with `getReader()` loop
 
-**Model:** `claude-opus-4-7`, `max_tokens: 2048`. System prompt sent with `cache_control: { type: "ephemeral" }` — prompt caching reduces latency on repeated analyses.
+**Model:** `claude-opus-5-5` at `effort: "low"`, `max_tokens: 8000` (thinking and the report share it), refusal fallback on (`fallbacks: "default"`). System prompt sent with `cache_control: { type: "ephemeral" }` — prompt caching reduces latency on repeated analyses.
 
 ---
 
@@ -131,7 +131,7 @@ Applied server-side before any text reaches Claude:
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
-| AI | `claude-opus-4-7` via Anthropic SDK, prompt-cached system prompt |
+| AI | `claude-opus-5-5` (low effort) via Anthropic SDK, prompt-cached system prompt |
 | Streaming | `ReadableStream` → `response.body.getReader()` |
 | Deployment | Vercel |
 

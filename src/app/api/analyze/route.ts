@@ -1,10 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { redactLogPII } from '@/lib/redact';
 import { classifyLog, type TaxonomyMatch } from '@/lib/error-taxonomy';
+import { CLAUDE_REQUEST, REFUSAL_MESSAGE, reportText } from '@/lib/claude';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
-  defaultHeaders: { 'anthropic-beta': 'prompt-caching-2024-07-31' },
 });
 
 const SYSTEM_PROMPT = `You are a senior infrastructure engineer specializing in backup and data protection systems (Dell EMC NetWorker, PowerProtect Data Manager, Veeam, Commvault, and generic Linux/Windows servers).
@@ -156,14 +156,12 @@ export async function POST(request: Request) {
         const userContent = `Analyze these logs:\n\n\`\`\`\n${redactLogPII(content)}\n\`\`\``;
         let fileAnalysis = '';
         try {
-          const msg = await client.messages.create({
-            model: 'claude-opus-4-7',
-            max_tokens: 2048,
+          const msg = await client.beta.messages.create({
+            ...CLAUDE_REQUEST,
             system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: userContent }],
           });
-          const block = msg.content[0];
-          fileAnalysis = block.type === 'text' ? block.text : '';
+          fileAnalysis = msg.stop_reason === 'refusal' ? REFUSAL_MESSAGE : reportText(msg.content);
         } catch (err) {
           fileAnalysis = err instanceof Error && err.message.includes('429')
             ? '**Error:** API rate limit reached. Please try again in a moment.'
@@ -237,9 +235,8 @@ export async function POST(request: Request) {
     async start(controller) {
       const enc = new TextEncoder();
       try {
-        const msgStream = client.messages.stream({
-          model: 'claude-opus-4-7',
-          max_tokens: 2048,
+        const msgStream = client.beta.messages.stream({
+          ...CLAUDE_REQUEST,
           system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
           messages: [
             {
@@ -256,6 +253,12 @@ export async function POST(request: Request) {
           ) {
             controller.enqueue(enc.encode(chunk.delta.text));
           }
+        }
+        const final = await msgStream.finalMessage();
+        if (final.stop_reason === 'refusal') {
+          controller.enqueue(enc.encode(`\n\n${REFUSAL_MESSAGE}`));
+        } else if (final.stop_reason === 'max_tokens') {
+          controller.enqueue(enc.encode('\n\n**Note:** The report was cut off at the length limit.'));
         }
       } catch (err) {
         const msg =
