@@ -23,3 +23,8 @@ updates:
       # ("engines"), not the newest Node release.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # typescript-eslint (via eslint-config-next) refuses to run on TS 7.0.
+      # Remove once typescript-eslint supports TS 7:
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: "typescript"
+        versions: [">=7"]
