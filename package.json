@@ -35,6 +35,7 @@
   "overrides": {
     "@typescript-eslint/typescript-estree": {
       "minimatch": "^11.0.5"
-    }
+    },
+    "minimatch@^10": "^11.0.5"
   }
 }
