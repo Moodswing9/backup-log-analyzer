@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.1] — 2026-11-15
+### Security
+- `minimatch` 10.2.6 → 11.0.8 through an npm override: the 10.x line had a denial-of-service issue (Dependabot alert #60). Even the latest ESLint still asks for 10.x, so the override stays until it moves to 11. Development dependency only
+- CI workflows declare read-only token permissions
+
+### Changed
+- `@anthropic-ai/sdk` 1.7.0 → 1.8.0
+- TypeScript 5.9 → 6.0 (development only). TypeScript 7 is skipped for now because typescript-eslint doesn't support it yet
+
 ## [0.8.0] — 2026-11-10
 ### Changed
 - Analyses run on **Claude Opus 5.5** (`claude-opus-5-5`) instead of Opus 4.7, in the web app and in `/analyze-log`. Opus 5.5 always thinks before answering, so effort is set to `low`: measured on two NetWorker/PPDM logs, that kept the cost per analysis ($0.043–0.051) and the time to first words (under 1 s) in line with Opus 4.7 and gave the same diagnoses, while the default effort (`medium`) doubled the cost and delayed the first words by 15–20 s
