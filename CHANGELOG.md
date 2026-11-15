@@ -102,3 +102,4 @@
 - Structured markdown output: Summary, Issues Detected, Root Causes, Recommended Actions, Prevention
 - 50,000-character input limit with character counter
 - Next.js 16 App Router, Tailwind CSS, deployed on Vercel
+
